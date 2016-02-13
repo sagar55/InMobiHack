@@ -9,54 +9,57 @@ import time
 import datetime
 
 parser = ConfigParser.ConfigParser()
-parser.read('key_tokens.config')
+parser.read('/home/ubuntu/InMobiHack/InMobiHack/key_tokens.config')
 CONSUMER_KEY = parser.get('critical_information', 'CONSUMER_KEY')
 CONSUMER_SECRET = parser.get('critical_information', 'CONSUMER_SECRET')
 ACCESS_TOKEN = parser.get('critical_information', 'ACCESS_TOKEN')
 ACCESS_TOKEN_SECRET = parser.get('critical_information', 'ACCESS_TOKEN_SECRET')
 
 def get_file_name():
-    dir_ = 'python-'
+    dir_ = '/home/ubuntu/InMobiHack/InMobiHack/'
     current_day = datetime.datetime.now().strftime("%Y-%m-%d")
     file_name = dir_ + current_day
-    return file_name
+    return file_name+'.json'
 
 
 class MyListener(StreamListener):
     #receiving stream of data
     
-
     def __init__(self):
         self.start = time.time()
         self.current = self.start
         self.count = 0
-        self.tweet_limit = 10
-        self.time_limit = 24*60*60 # 24 hour
+        self.tweet_limit = 1000 
+        self.time_limit = 23*60*60 # 23 hour
         self.file_name = get_file_name()
 
     def on_data(self, data):
         parsed_data = json.loads(data)
-        #self.current = time.time()
-        #elapse_time = self.current - self.start
+        self.current = time.time()
+        elapse_time = self.current - self.start
         
         self.count = self.count + 1
-
-        if self.count>self.tweet_limit:
-            print "No. of tweets per day limit exceeded"
+        time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if self.count > self.tweet_limit:
+            print "[ " + time_ + " ]"+" No. of tweets for the day " + self.file_name[-15:-5] + "(time : "+ str(elapse_time)+ " tweet count : "+ str(self.count)+")" + " limit exceeded!"
             sys.exit()
 
-        file_name = get_file_name()
+        if elapse_time > self.time_limit:
+			print "[ " + time_ + " ]"+" time limit exceeded" + " (tweet count : "+ str(self.count)+")"
+			sys.exit()
 
-        if file_name!=self.file_name:
-            print " No. of tweets for the day " + self.file_name[-10:], str(self.count)
-            self.file_name = file_name
+        #file_name = get_file_name()
+        #if file_name!=self.file_name:
+           # print " No. of tweets for the day " + self.file_name[-10:], str(self.count)
+           # self.file_name = file_name
+
         try:
             with open(self.file_name, 'a') as f:
                 #f.write(data+"\n")
                 f.write(json.dumps(parsed_data,indent=4)+"\n\n\n\n")
                 return True
         except BaseException as e:
-            print("Error on_data: %s" % str(e))
+            print("[ " + time_ + " ]"+" Error on_data: %s" % str(e))
         return True
 
     def on_status(self, status):
@@ -67,11 +70,13 @@ class MyListener(StreamListener):
         return true
  
     def on_error(self, status_code):
-        print('Got an error with status code: ' + str(status_code))
+        time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("[ " + time_ + " ]"+" Got an error with status code: " + str(status_code))
         return True # To continue listening
  
     def on_timeout(self):
-        print('Timeout...')
+        time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("[ " + time_ + " ]"+" Timeout...")
         return True # To continue listening
  
 
@@ -92,7 +97,14 @@ if __name__ == '__main__':
     stream = Stream(do_auth(), listener)
     #stream.filter(follow=[#id], track=['#python']) #getting all tweet of following id having hashtag as "python"
     #stream.filter(track=['#python'])
-    fetch_tweet("")
+
+    try:
+    	fetch_tweet("")
+    except BaseException as e:
+        time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print "[ " + time_ + " ]"+" Error!!  %s" % str(e)
+        stream.disconnect()
+		
     #stream.userstream()
 
 
