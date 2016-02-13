@@ -4,6 +4,9 @@ from tweepy import Stream
 from tweepy.streaming import StreamListener
 import ConfigParser
 import json
+import sys
+import time
+import datetime
 
 parser = ConfigParser.ConfigParser()
 parser.read('key_tokens.config')
@@ -12,14 +15,45 @@ CONSUMER_SECRET = parser.get('critical_information', 'CONSUMER_SECRET')
 ACCESS_TOKEN = parser.get('critical_information', 'ACCESS_TOKEN')
 ACCESS_TOKEN_SECRET = parser.get('critical_information', 'ACCESS_TOKEN_SECRET')
 
+def get_file_name():
+    dir_ = 'python-'
+    current_day = datetime.datetime.now().strftime("%Y-%m-%d")
+    file_name = dir_ + current_day
+    return file_name
+
 
 class MyListener(StreamListener):
     #receiving stream of data
- 
+    
+
+    def __init__(self):
+        self.start = time.time()
+        self.current = self.start
+        self.count = 0
+        self.tweet_limit = 5
+        self.time_limit = 5*60 # 5 minute
+        self.file_name = get_file_name()
+
     def on_data(self, data):
+        #json_data = json.loads(data)
+        #self.current = time.time()
+        #elapse_time = self.current - self.start
+        
+        self.count = self.count + 1
+
+        if self.count>self.tweet_limit:
+            print "No. of tweets per day limit exceeded"
+            sys.exit()
+
+        file_name = get_file_name()
+
+        if file_name!=self.file_name:
+            print " No. of tweets for the day " + self.file_name[-10:], str(self.count)
+            self.file_name = file_name
         try:
-            with open('python.json', 'a') as f:
+            with open(self.file_name, 'a') as f:
                 f.write(data)
+                #f.write(json.dumps(json_data,indent=4)+"\n\n\n\n")
                 return True
         except BaseException as e:
             print("Error on_data: %s" % str(e))
@@ -53,7 +87,7 @@ if __name__ == '__main__':
     listener = MyListener()
     stream = Stream(do_auth(), listener)
     #stream.filter(follow=[#id], track=['#python']) #getting all tweet of following id having hashtag as "python"
-    stream.filter(track=['#python'])
-    #stream.userstream()
+    #stream.filter(track=['#python'])
+    stream.userstream()
 
 
